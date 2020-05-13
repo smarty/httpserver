@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -39,6 +41,7 @@ type ServerFixture struct {
 	shutdownContext context.Context
 	shutdownError   error
 
+	mutex  sync.Mutex
 	logged []string
 }
 
@@ -76,7 +79,6 @@ func (this *ServerFixture) TestWhenListenerFails_ItShouldNotServe() {
 	this.So(this.listenNetwork, should.Equal, "tcp")
 	this.So(this.listenAddress, should.Equal, "my-listen-address")
 }
-
 func (this *ServerFixture) TestWhenServerFails_ItShouldWaitUntilCloseIsExplicitlyInvoked() {
 	this.serveError = errors.New("")
 	this.initialize()
@@ -104,7 +106,6 @@ func (this *ServerFixture) TestWhenMasterContextConcludes_CloseNeedNotBeExplicit
 	this.So(this.shutdownContext, should.NotEqual, this.masterContext)
 	this.So(this.shutdownContext.Value("key"), should.Equal, "master-context")
 }
-
 func (this *ServerFixture) TestWhenServerClosing_ItAllowsServerTimeToConcludeListenOperations() {
 	this.shutdownTimeout = time.Millisecond * 5
 	this.initialize()
@@ -123,16 +124,24 @@ func (this *ServerFixture) TestWhenServeFails_ItShouldLogWarning() {
 	go func() { _ = this.server.Close() }()
 	this.server.Listen()
 
-	this.So(this.logged[len(this.logged)-1], should.ContainSubstring, failureMessage)
+	this.So(this.logContainsMessage(failureMessage), should.BeTrue)
 }
-
 func (this *ServerFixture) TestServerShutdownCompletes_ItShouldNotLogWarning() {
 	this.serveError = http.ErrServerClosed
 
 	go func() { _ = this.server.Close() }()
 	this.server.Listen()
 
-	this.So(this.logged[len(this.logged)-1], should.NotContainSubstring, "[WARN]")
+	this.So(this.logContainsMessage("[WARN]]"), should.BeFalse)
+}
+func (this *ServerFixture) logContainsMessage(text string) bool {
+	for _, message := range this.logged {
+		if strings.Contains(message, text) {
+			return true
+		}
+	}
+
+	return false
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,6 +166,8 @@ func (this *ServerFixture) Shutdown(ctx context.Context) error {
 }
 
 func (this *ServerFixture) Printf(format string, args ...interface{}) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
 	this.logged = append(this.logged, fmt.Sprintf(format, args...))
 }
 
