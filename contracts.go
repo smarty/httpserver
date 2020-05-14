@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"net/http"
 )
 
 type ListenCloser interface {
@@ -13,6 +14,9 @@ type ListenCloser interface {
 
 type logger interface {
 	Printf(string, ...interface{})
+}
+type monitor interface {
+	PanicRecovered(request *http.Request, err interface{})
 }
 
 type httpServer interface {
