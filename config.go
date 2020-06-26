@@ -76,14 +76,6 @@ func (singleton) apply(options ...option) option {
 	}
 }
 func (singleton) defaults(options ...option) []option {
-	const defaultShutdownTimeout = time.Second * 5
-	const defaultListenAddress = ":http"
-	const defaultHandlePanic = true
-
-	var defaultContext = context.Background()
-	var defaultHandler = nop{}
-	var defaultMonitor = nop{}
-	var defaultLogger = nop{}
 	var defaultListenConfig = &net.ListenConfig{Control: func(_, _ string, conn syscall.RawConn) error {
 		return conn.Control(func(descriptor uintptr) {
 			_ = syscall.SetsockoptInt(int(descriptor), syscall.SOL_SOCKET, socketReusePort, 1)
@@ -91,13 +83,13 @@ func (singleton) defaults(options ...option) []option {
 	}}
 
 	return append([]option{
-		Options.ListenAddress(defaultListenAddress),
-		Options.ShutdownTimeout(defaultShutdownTimeout),
-		Options.HandlePanic(defaultHandlePanic),
-		Options.Context(defaultContext),
-		Options.Handler(defaultHandler),
-		Options.Monitor(defaultMonitor),
-		Options.Logger(defaultLogger),
+		Options.ListenAddress(":http"),
+		Options.ShutdownTimeout(time.Second * 5),
+		Options.HandlePanic(true),
+		Options.Context(context.Background()),
+		Options.Handler(nop{}),
+		Options.Monitor(nop{}),
+		Options.Logger(nop{}),
 		Options.SocketConfig(defaultListenConfig),
 	}, options...)
 }
