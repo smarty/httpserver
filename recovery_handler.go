@@ -1,6 +1,8 @@
 package httpserver
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"runtime/debug"
 )
@@ -29,7 +31,18 @@ func (this recoveryHandler) finally(response http.ResponseWriter, request *http.
 		return
 	}
 
-	this.monitor.PanicRecovered(request, err)
-	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", err, debug.Stack())
+	this.logRecovery(err, request)
+	this.internalServerError(response)
+}
+
+func (this recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
+	err, isErr := recovered.(error)
+	if isErr && errors.Is(err, context.Canceled) {
+		return
+	}
+	this.monitor.PanicRecovered(request, recovered)
+	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", recovered, debug.Stack())
+}
+func (this recoveryHandler) internalServerError(response http.ResponseWriter) {
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
