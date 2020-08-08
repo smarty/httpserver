@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"log"
 	"net"
 	"net/http"
 	"syscall"
@@ -89,7 +90,7 @@ func (singleton) defaults(options ...option) []option {
 		Options.Context(context.Background()),
 		Options.Handler(nop{}),
 		Options.Monitor(nop{}),
-		Options.Logger(nop{}),
+		Options.Logger(log.New(log.Writer(), log.Prefix(), log.Flags())),
 		Options.SocketConfig(defaultListenConfig),
 	}, options...)
 }
