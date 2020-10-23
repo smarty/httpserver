@@ -65,6 +65,16 @@ func (this *RecoveryHandlerFixture) TestInnerHandlerPanic_ContextCancellation_Re
 	this.So(this.panicRecoveredRequest, should.BeNil)
 	this.So(this.logged, should.BeEmpty)
 }
+func (this *RecoveryHandlerFixture) TestInnerHandlerPanic_ContextDeadlineExceeded_ReturnHTTP500() {
+	this.serveHTTPError = fmt.Errorf("inner: %w", context.DeadlineExceeded)
+
+	this.handler.ServeHTTP(this.response, this.request)
+
+	this.So(this.response.Code, should.Equal, 500)
+	this.So(this.panicRecoveredCount, should.Equal, 0)
+	this.So(this.panicRecoveredRequest, should.BeNil)
+	this.So(this.logged, should.BeEmpty)
+}
 func (this *RecoveryHandlerFixture) TestInnerHandlerPanicsWithError_ItShouldNotPanicButShouldNotifyMonitorAndReturnHTTP500() {
 	this.serveHTTPError = errors.New("panic value")
 

@@ -36,13 +36,17 @@ func (this recoveryHandler) finally(response http.ResponseWriter, request *http.
 }
 
 func (this recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
-	err, isErr := recovered.(error)
-	if isErr && errors.Is(err, context.Canceled) {
+	if isContextCancellation(recovered) {
 		return
 	}
+
 	this.monitor.PanicRecovered(request, recovered)
 	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", recovered, debug.Stack())
 }
 func (this recoveryHandler) internalServerError(response http.ResponseWriter) {
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+}
+func isContextCancellation(recovered interface{}) bool {
+	err, isErr := recovered.(error)
+	return isErr && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
 }
