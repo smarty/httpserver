@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"context"
+	"crypto/tls"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -15,6 +17,7 @@ type defaultServer struct {
 	shutdownTimeout time.Duration
 	listenAddress   string
 	listenConfig    listenConfig
+	tlsConfig       *tls.Config
 	httpServer      httpServer
 	logger          logger
 }
@@ -29,6 +32,7 @@ func newServer(config configuration) ListenCloser {
 		shutdownTimeout: config.shutdownTimeout,
 		listenAddress:   config.listenAddress,
 		listenConfig:    config.listenConfig,
+		tlsConfig:       config.TLSConfig,
 		httpServer:      config.httpServer,
 		logger:          config.logger,
 	}
@@ -48,11 +52,18 @@ func (this defaultServer) listen(waiter *sync.WaitGroup) {
 	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s]...", this.listenAddress)
 	if listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress); err != nil {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
-	} else if err := this.httpServer.Serve(listener); err == nil {
+	} else if err := this.httpServer.Serve(this.tryTLSListener(listener)); err == nil {
 		this.logger.Printf("[INFO] HTTP server concluded listening operations.")
 	} else if err != http.ErrServerClosed {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
 	}
+}
+func (this defaultServer) tryTLSListener(listener net.Listener) net.Listener {
+	if this.tlsConfig == nil {
+		return listener
+	}
+
+	return tls.NewListener(listener, this.tlsConfig)
 }
 func (this defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	defer waiter.Done()

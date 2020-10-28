@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +16,7 @@ type configuration struct {
 	shutdownTimeout time.Duration
 	listenAddress   string
 	listenConfig    listenConfig
+	TLSConfig       *tls.Config
 	handlePanic     bool
 	monitor         monitor
 	logger          logger
@@ -38,6 +40,9 @@ func (singleton) Context(value context.Context) option {
 }
 func (singleton) ListenAddress(value string) option {
 	return func(this *configuration) { this.listenAddress = value }
+}
+func (singleton) TLSConfig(value *tls.Config) option {
+	return func(this *configuration) { this.TLSConfig = value }
 }
 func (singleton) Handler(value http.Handler) option {
 	return func(this *configuration) { this.handler = value }
@@ -85,6 +90,7 @@ func (singleton) defaults(options ...option) []option {
 
 	return append([]option{
 		Options.ListenAddress(":http"),
+		Options.TLSConfig(nil),
 		Options.ShutdownTimeout(time.Second * 5),
 		Options.HandlePanic(true),
 		Options.Context(context.Background()),
