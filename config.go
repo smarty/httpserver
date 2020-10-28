@@ -11,17 +11,17 @@ import (
 )
 
 type configuration struct {
-	ctx             context.Context
-	handler         http.Handler
-	shutdownTimeout time.Duration
-	listenAddress   string
-	listenConfig    listenConfig
+	Context         context.Context
+	Handler         http.Handler
+	ShutdownTimeout time.Duration
+	ListenAddress   string
+	SocketConfig    listenConfig
 	TLSConfig       *tls.Config
-	handlePanic     bool
-	monitor         monitor
-	logger          logger
+	HandlePanic     bool
+	Monitor         monitor
+	Logger          logger
 
-	httpServer httpServer
+	HTTPServer httpServer
 }
 
 func New(options ...option) ListenCloser {
@@ -36,34 +36,34 @@ type singleton struct{}
 type option func(*configuration)
 
 func (singleton) Context(value context.Context) option {
-	return func(this *configuration) { this.ctx = value }
+	return func(this *configuration) { this.Context = value }
 }
 func (singleton) ListenAddress(value string) option {
-	return func(this *configuration) { this.listenAddress = value }
+	return func(this *configuration) { this.ListenAddress = value }
 }
 func (singleton) TLSConfig(value *tls.Config) option {
 	return func(this *configuration) { this.TLSConfig = value }
 }
 func (singleton) Handler(value http.Handler) option {
-	return func(this *configuration) { this.handler = value }
+	return func(this *configuration) { this.Handler = value }
 }
 func (singleton) HandlePanic(value bool) option {
-	return func(this *configuration) { this.handlePanic = value }
+	return func(this *configuration) { this.HandlePanic = value }
 }
 func (singleton) HTTPServer(value httpServer) option {
-	return func(this *configuration) { this.httpServer = value }
+	return func(this *configuration) { this.HTTPServer = value }
 }
 func (singleton) ShutdownTimeout(value time.Duration) option {
-	return func(this *configuration) { this.shutdownTimeout = value }
+	return func(this *configuration) { this.ShutdownTimeout = value }
 }
 func (singleton) SocketConfig(value listenConfig) option {
-	return func(this *configuration) { this.listenConfig = value }
+	return func(this *configuration) { this.SocketConfig = value }
 }
 func (singleton) Monitor(value monitor) option {
-	return func(this *configuration) { this.monitor = value }
+	return func(this *configuration) { this.Monitor = value }
 }
 func (singleton) Logger(value logger) option {
-	return func(this *configuration) { this.logger = value }
+	return func(this *configuration) { this.Logger = value }
 }
 
 func (singleton) apply(options ...option) option {
@@ -72,17 +72,17 @@ func (singleton) apply(options ...option) option {
 			option(this)
 		}
 
-		if this.handlePanic {
-			this.handler = newRecoveryHandler(this.handler, this.monitor, this.logger)
+		if this.HandlePanic {
+			this.Handler = newRecoveryHandler(this.Handler, this.Monitor, this.Logger)
 		}
 
-		if this.httpServer == nil {
-			this.httpServer = &http.Server{Addr: this.listenAddress, Handler: this.handler}
+		if this.HTTPServer == nil {
+			this.HTTPServer = &http.Server{Addr: this.ListenAddress, Handler: this.Handler}
 		}
 	}
 }
 func (singleton) defaults(options ...option) []option {
-	var defaultListenConfig = &net.ListenConfig{Control: func(_, _ string, conn syscall.RawConn) error {
+	var defaultSocketConfig = &net.ListenConfig{Control: func(_, _ string, conn syscall.RawConn) error {
 		return conn.Control(func(descriptor uintptr) {
 			_ = syscall.SetsockoptInt(int(descriptor), syscall.SOL_SOCKET, socketReusePort, 1)
 		})
@@ -97,14 +97,12 @@ func (singleton) defaults(options ...option) []option {
 		Options.Handler(nop{}),
 		Options.Monitor(nop{}),
 		Options.Logger(log.New(log.Writer(), log.Prefix(), log.Flags())),
-		Options.SocketConfig(defaultListenConfig),
+		Options.SocketConfig(defaultSocketConfig),
 	}, options...)
 }
 
 type nop struct{}
 
-func (nop) Printf(_ string, _ ...interface{}) {}
-
+func (nop) Printf(_ string, _ ...interface{})                {}
 func (nop) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
-
-func (nop) PanicRecovered(*http.Request, interface{}) {}
+func (nop) PanicRecovered(*http.Request, interface{})        {}

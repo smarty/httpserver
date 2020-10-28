@@ -23,18 +23,18 @@ type defaultServer struct {
 }
 
 func newServer(config configuration) ListenCloser {
-	softContext, softShutdown := context.WithCancel(config.ctx)
+	softContext, softShutdown := context.WithCancel(config.Context)
 	return defaultServer{
 		config:          config,
-		hardContext:     config.ctx,
+		hardContext:     config.Context,
 		softContext:     softContext,
 		softShutdown:    softShutdown,
-		shutdownTimeout: config.shutdownTimeout,
-		listenAddress:   config.listenAddress,
-		listenConfig:    config.listenConfig,
+		shutdownTimeout: config.ShutdownTimeout,
+		listenAddress:   config.ListenAddress,
+		listenConfig:    config.SocketConfig,
 		tlsConfig:       config.TLSConfig,
-		httpServer:      config.httpServer,
-		logger:          config.logger,
+		httpServer:      config.HTTPServer,
+		logger:          config.Logger,
 	}
 }
 
