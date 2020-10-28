@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"runtime/debug"
@@ -36,7 +37,7 @@ func (this recoveryHandler) finally(response http.ResponseWriter, request *http.
 }
 
 func (this recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
-	if isContextCancellation(recovered) {
+	if isIgnoredError(recovered) {
 		return
 	}
 
@@ -46,7 +47,11 @@ func (this recoveryHandler) logRecovery(recovered interface{}, request *http.Req
 func (this recoveryHandler) internalServerError(response http.ResponseWriter) {
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
-func isContextCancellation(recovered interface{}) bool {
+func isIgnoredError(recovered interface{}) bool {
 	err, isErr := recovered.(error)
-	return isErr && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
+	if !isErr {
+		return false
+	}
+
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, sql.ErrTxDone)
 }
