@@ -53,5 +53,17 @@ func isIgnoredError(recovered interface{}) bool {
 		return false
 	}
 
-	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, sql.ErrTxDone)
+	if errors.Is(err, context.Canceled) {
+		return true
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	if errors.Is(err, sql.ErrTxDone) {
+		return true
+	}
+
+	return false
 }
