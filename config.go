@@ -122,7 +122,7 @@ func (singleton) defaults(options ...option) []option {
 		Options.MaxRequestHeaderSize(1024 * 2),
 		Options.ReadRequestTimeout(time.Second * 5),
 		Options.ReadRequestHeaderTimeout(time.Second),
-		Options.WriteResponseTimeout(time.Second * 60),
+		Options.WriteResponseTimeout(time.Second * 90),
 		Options.IdleConnectionTimeout(time.Second * 30),
 		Options.ShutdownTimeout(time.Second * 5),
 		Options.HandlePanic(true),
