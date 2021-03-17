@@ -52,9 +52,9 @@ func (this defaultServer) listen(waiter *sync.WaitGroup) {
 	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s]...", this.listenAddress)
 	if listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress); err != nil {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
-	} else if err := this.httpServer.Serve(this.tryTLSListener(listener)); err == nil {
+	} else if err := this.httpServer.Serve(this.tryTLSListener(listener)); err == nil || err == http.ErrServerClosed {
 		this.logger.Printf("[INFO] HTTP server concluded listening operations.")
-	} else if err != http.ErrServerClosed {
+	} else {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
 	}
 }
