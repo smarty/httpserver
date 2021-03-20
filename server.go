@@ -53,6 +53,10 @@ func (this defaultServer) Listen() {
 func (this defaultServer) listen(waiter *sync.WaitGroup) {
 	defer waiter.Done()
 
+	if len(this.listenAddress) == 0 {
+		return
+	}
+
 	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s]...", this.listenAddress)
 	if listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress); err != nil {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
