@@ -82,15 +82,17 @@ func (this defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	defer cancel()
 	this.logger.Printf("[INFO] Shutting down HTTP server...")
 	shutdownError = this.httpServer.Shutdown(ctx)
-	this.logger.Printf("[INFO] HTTP server shutdown complete.")
 }
 func (this defaultServer) awaitOutstandingRequests(err error) {
+	defer this.logger.Printf("[INFO] HTTP server shutdown complete.")
+
 	if err == nil {
 		return
 	}
 
 	// 1+ outstanding request(s) is/are still being processed, if the request.Context() cancellation is considered by
 	// the http.Handler, let's give a moment longer to complete the run through the configured http.Handler pipeline.
+	this.logger.Printf("[INFO] HTTP request(s) in flight after server shutdown, waiting for %s...", this.forcedTimeout)
 	ctx, cancel := context.WithTimeout(context.Background(), this.forcedTimeout)
 	defer cancel()
 	<-ctx.Done()
