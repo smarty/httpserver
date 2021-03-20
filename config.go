@@ -12,6 +12,7 @@ import (
 
 type configuration struct {
 	Context                  context.Context
+	ContextShutdown          context.CancelFunc
 	Handler                  http.Handler
 	MaxRequestHeaderSize     int
 	ReadRequestTimeout       time.Duration
@@ -19,6 +20,7 @@ type configuration struct {
 	WriteResponseTimeout     time.Duration
 	IdleConnectionTimeout    time.Duration
 	ShutdownTimeout          time.Duration
+	ForceShutdownTimeout     time.Duration
 	ListenAddress            string
 	SocketConfig             listenConfig
 	TLSConfig                *tls.Config
@@ -75,6 +77,9 @@ func (singleton) IdleConnectionTimeout(value time.Duration) option {
 func (singleton) ShutdownTimeout(value time.Duration) option {
 	return func(this *configuration) { this.ShutdownTimeout = value }
 }
+func (singleton) ForceShutdownTimeout(value time.Duration) option {
+	return func(this *configuration) { this.ForceShutdownTimeout = value }
+}
 func (singleton) SocketConfig(value listenConfig) option {
 	return func(this *configuration) { this.SocketConfig = value }
 }
@@ -95,6 +100,7 @@ func (singleton) apply(options ...option) option {
 			this.Handler = newRecoveryHandler(this.Handler, this.Monitor, this.Logger)
 		}
 
+		this.Context, this.ContextShutdown = context.WithCancel(this.Context)
 		if this.HTTPServer == nil {
 			this.HTTPServer = &http.Server{
 				Addr:              this.ListenAddress,
@@ -125,6 +131,7 @@ func (singleton) defaults(options ...option) []option {
 		Options.WriteResponseTimeout(time.Second * 90),
 		Options.IdleConnectionTimeout(time.Second * 30),
 		Options.ShutdownTimeout(time.Second * 5),
+		Options.ForceShutdownTimeout(time.Second),
 		Options.HandlePanic(true),
 		Options.Context(context.Background()),
 		Options.Handler(nop{}),

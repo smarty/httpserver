@@ -12,9 +12,11 @@ import (
 type defaultServer struct {
 	config          configuration
 	hardContext     context.Context
+	hardShutdown    context.CancelFunc
 	softContext     context.Context
 	softShutdown    context.CancelFunc
 	shutdownTimeout time.Duration
+	forcedTimeout   time.Duration
 	listenAddress   string
 	listenConfig    listenConfig
 	tlsConfig       *tls.Config
@@ -27,9 +29,11 @@ func newServer(config configuration) ListenCloser {
 	return defaultServer{
 		config:          config,
 		hardContext:     config.Context,
+		hardShutdown:    config.ContextShutdown,
 		softContext:     softContext,
 		softShutdown:    softShutdown,
 		shutdownTimeout: config.ShutdownTimeout,
+		forcedTimeout:   config.ForceShutdownTimeout,
 		listenAddress:   config.ListenAddress,
 		listenConfig:    config.SocketConfig,
 		tlsConfig:       config.TLSConfig,
@@ -66,14 +70,30 @@ func (this defaultServer) tryTLSListener(listener net.Listener) net.Listener {
 	return tls.NewListener(listener, this.tlsConfig)
 }
 func (this defaultServer) watchShutdown(waiter *sync.WaitGroup) {
-	defer waiter.Done()
+	var shutdownError error
+	defer func() {
+		defer waiter.Done()
+		this.hardShutdown()
+		this.awaitOutstandingRequests(shutdownError)
+	}()
 
 	<-this.softContext.Done()                                                  // waiting for soft context shutdown to occur
 	ctx, cancel := context.WithTimeout(this.hardContext, this.shutdownTimeout) // wait until shutdownTimeout for shutdown
 	defer cancel()
 	this.logger.Printf("[INFO] Shutting down HTTP server...")
-	_ = this.httpServer.Shutdown(ctx)
+	shutdownError = this.httpServer.Shutdown(ctx)
 	this.logger.Printf("[INFO] HTTP server shutdown complete.")
+}
+func (this defaultServer) awaitOutstandingRequests(err error) {
+	if err == nil {
+		return
+	}
+
+	// 1+ outstanding request(s) is/are still being processed, if the request.Context() cancellation is considered by
+	// the http.Handler, let's give a moment longer to complete the run through the configured http.Handler pipeline.
+	ctx, cancel := context.WithTimeout(context.Background(), this.forcedTimeout)
+	defer cancel()
+	<-ctx.Done()
 }
 
 func (this defaultServer) Close() error {
