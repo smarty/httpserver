@@ -68,8 +68,9 @@ func (this defaultServer) tryTLSListener(listener net.Listener) net.Listener {
 func (this defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	defer waiter.Done()
 
-	<-this.softContext.Done()                                             // waiting for soft context shutdown to occur
-	ctx, _ := context.WithTimeout(this.hardContext, this.shutdownTimeout) // wait until shutdownTimeout for shutdown
+	<-this.softContext.Done()                                                  // waiting for soft context shutdown to occur
+	ctx, cancel := context.WithTimeout(this.hardContext, this.shutdownTimeout) // wait until shutdownTimeout for shutdown
+	defer cancel()
 	this.logger.Printf("[INFO] Shutting down HTTP server...")
 	_ = this.httpServer.Shutdown(ctx)
 	this.logger.Printf("[INFO] HTTP server shutdown complete.")
