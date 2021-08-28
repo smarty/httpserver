@@ -134,8 +134,8 @@ func (singleton) defaults(options ...option) []option {
 		Options.ForceShutdownTimeout(time.Second),
 		Options.HandlePanic(true),
 		Options.Context(context.Background()),
-		Options.Handler(nop{}),
-		Options.Monitor(nop{}),
+		Options.Handler(&nop{}),
+		Options.Monitor(&nop{}),
 		Options.Logger(log.New(log.Writer(), log.Prefix(), log.Flags())),
 		Options.SocketConfig(defaultSocketConfig),
 	}, options...)
@@ -143,6 +143,6 @@ func (singleton) defaults(options ...option) []option {
 
 type nop struct{}
 
-func (nop) Printf(_ string, _ ...interface{})                {}
-func (nop) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
-func (nop) PanicRecovered(*http.Request, interface{})        {}
+func (*nop) Printf(_ string, _ ...interface{})                {}
+func (*nop) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
+func (*nop) PanicRecovered(*http.Request, interface{})        {}
