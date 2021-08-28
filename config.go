@@ -3,7 +3,6 @@ package httpserver
 import (
 	"context"
 	"crypto/tls"
-	"log"
 	"net"
 	"net/http"
 	"syscall"
@@ -122,6 +121,8 @@ func (singleton) defaults(options ...option) []option {
 		})
 	}}
 
+	defaultNop := &nop{}
+
 	return append([]option{
 		Options.ListenAddress(":http"),
 		Options.TLSConfig(nil),
@@ -134,9 +135,9 @@ func (singleton) defaults(options ...option) []option {
 		Options.ForceShutdownTimeout(time.Second),
 		Options.HandlePanic(true),
 		Options.Context(context.Background()),
-		Options.Handler(&nop{}),
-		Options.Monitor(&nop{}),
-		Options.Logger(log.New(log.Writer(), log.Prefix(), log.Flags())),
+		Options.Handler(defaultNop),
+		Options.Monitor(defaultNop),
+		Options.Logger(defaultNop),
 		Options.SocketConfig(defaultSocketConfig),
 	}, options...)
 }
