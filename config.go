@@ -21,7 +21,8 @@ type configuration struct {
 	ShutdownTimeout          time.Duration
 	ForceShutdownTimeout     time.Duration
 	ListenAddress            string
-	SocketConfig             listenConfig
+	ListenConfig             listenConfig
+	ListenAdapter            func(net.Listener) net.Listener
 	TLSConfig                *tls.Config
 	HandlePanic              bool
 	Monitor                  monitor
@@ -79,8 +80,11 @@ func (singleton) ShutdownTimeout(value time.Duration) option {
 func (singleton) ForceShutdownTimeout(value time.Duration) option {
 	return func(this *configuration) { this.ForceShutdownTimeout = value }
 }
-func (singleton) SocketConfig(value listenConfig) option {
-	return func(this *configuration) { this.SocketConfig = value }
+func (singleton) ListenConfig(value listenConfig) option {
+	return func(this *configuration) { this.ListenConfig = value }
+}
+func (singleton) ListenAdapter(value func(net.Listener) net.Listener) option {
+	return func(this *configuration) { this.ListenAdapter = value }
 }
 func (singleton) Monitor(value monitor) option {
 	return func(this *configuration) { this.Monitor = value }
@@ -88,6 +92,9 @@ func (singleton) Monitor(value monitor) option {
 func (singleton) Logger(value logger) option {
 	return func(this *configuration) { this.Logger = value }
 }
+
+// Deprecated: SocketConfig is deprecated.
+func (singleton) SocketConfig(value listenConfig) option { return Options.ListenConfig(value) }
 
 func (singleton) apply(options ...option) option {
 	return func(this *configuration) {
@@ -115,7 +122,7 @@ func (singleton) apply(options ...option) option {
 	}
 }
 func (singleton) defaults(options ...option) []option {
-	var defaultSocketConfig = &net.ListenConfig{Control: func(_, _ string, conn syscall.RawConn) error {
+	var defaultListenConfig = &net.ListenConfig{Control: func(_, _ string, conn syscall.RawConn) error {
 		return conn.Control(func(descriptor uintptr) {
 			_ = syscall.SetsockoptInt(int(descriptor), syscall.SOL_SOCKET, socketReusePort, 1)
 		})
@@ -138,7 +145,8 @@ func (singleton) defaults(options ...option) []option {
 		Options.Handler(defaultNop),
 		Options.Monitor(defaultNop),
 		Options.Logger(defaultNop),
-		Options.SocketConfig(defaultSocketConfig),
+		Options.ListenConfig(defaultListenConfig),
+		Options.ListenAdapter(nil),
 	}, options...)
 }
 

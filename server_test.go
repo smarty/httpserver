@@ -52,7 +52,7 @@ func (this *ServerFixture) Setup() {
 func (this *ServerFixture) initialize() {
 	this.server = New(
 		Options.Context(this.masterContext),
-		Options.SocketConfig(this),
+		Options.ListenConfig(this),
 		Options.HTTPServer(this),
 		Options.ShutdownTimeout(this.shutdownTimeout),
 		Options.ListenAddress("my-listen-address"),
