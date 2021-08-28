@@ -26,7 +26,7 @@ type defaultServer struct {
 
 func newServer(config configuration) ListenCloser {
 	softContext, softShutdown := context.WithCancel(config.Context)
-	return defaultServer{
+	return &defaultServer{
 		config:          config,
 		hardContext:     config.Context,
 		hardShutdown:    config.ContextShutdown,
@@ -42,7 +42,7 @@ func newServer(config configuration) ListenCloser {
 	}
 }
 
-func (this defaultServer) Listen() {
+func (this *defaultServer) Listen() {
 	waiter := &sync.WaitGroup{}
 	waiter.Add(2)
 	defer waiter.Wait()
@@ -50,7 +50,7 @@ func (this defaultServer) Listen() {
 	go this.listen(waiter)
 	go this.watchShutdown(waiter)
 }
-func (this defaultServer) listen(waiter *sync.WaitGroup) {
+func (this *defaultServer) listen(waiter *sync.WaitGroup) {
 	defer waiter.Done()
 
 	if len(this.listenAddress) == 0 {
@@ -66,14 +66,14 @@ func (this defaultServer) listen(waiter *sync.WaitGroup) {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
 	}
 }
-func (this defaultServer) tryTLSListener(listener net.Listener) net.Listener {
+func (this *defaultServer) tryTLSListener(listener net.Listener) net.Listener {
 	if this.tlsConfig == nil {
 		return listener
 	}
 
 	return tls.NewListener(listener, this.tlsConfig)
 }
-func (this defaultServer) watchShutdown(waiter *sync.WaitGroup) {
+func (this *defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	var shutdownError error
 	defer func() {
 		defer waiter.Done()
@@ -87,7 +87,7 @@ func (this defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	this.logger.Printf("[INFO] Shutting down HTTP server...")
 	shutdownError = this.httpServer.Shutdown(ctx)
 }
-func (this defaultServer) awaitOutstandingRequests(err error) {
+func (this *defaultServer) awaitOutstandingRequests(err error) {
 	defer this.logger.Printf("[INFO] HTTP server shutdown complete.")
 
 	if err == nil {
@@ -102,7 +102,7 @@ func (this defaultServer) awaitOutstandingRequests(err error) {
 	<-ctx.Done()
 }
 
-func (this defaultServer) Close() error {
+func (this *defaultServer) Close() error {
 	this.softShutdown()
 	return nil
 }

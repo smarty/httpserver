@@ -15,18 +15,18 @@ type recoveryHandler struct {
 }
 
 func newRecoveryHandler(handler http.Handler, monitor monitor, logger logger) http.Handler {
-	return recoveryHandler{
+	return &recoveryHandler{
 		Handler: handler,
 		monitor: monitor,
 		logger:  logger,
 	}
 }
 
-func (this recoveryHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+func (this *recoveryHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	defer this.finally(response, request)
 	this.Handler.ServeHTTP(response, request)
 }
-func (this recoveryHandler) finally(response http.ResponseWriter, request *http.Request) {
+func (this *recoveryHandler) finally(response http.ResponseWriter, request *http.Request) {
 	err := recover()
 	if err == nil {
 		return
@@ -36,7 +36,7 @@ func (this recoveryHandler) finally(response http.ResponseWriter, request *http.
 	this.internalServerError(response)
 }
 
-func (this recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
+func (this *recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
 	if isIgnoredError(recovered) {
 		return
 	}
@@ -44,7 +44,7 @@ func (this recoveryHandler) logRecovery(recovered interface{}, request *http.Req
 	this.monitor.PanicRecovered(request, recovered)
 	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", recovered, debug.Stack())
 }
-func (this recoveryHandler) internalServerError(response http.ResponseWriter) {
+func (this *recoveryHandler) internalServerError(response http.ResponseWriter) {
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 func isIgnoredError(recovered interface{}) bool {
