@@ -92,8 +92,8 @@ func (singleton) Logger(value logger) option {
 
 func (singleton) apply(options ...option) option {
 	return func(this *configuration) {
-		for _, option := range Options.defaults(options...) {
-			option(this)
+		for _, item := range Options.defaults(options...) {
+			item(this)
 		}
 
 		if this.HandlePanic {
