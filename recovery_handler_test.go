@@ -40,7 +40,8 @@ type RecoveryHandlerFixture struct {
 func (this *RecoveryHandlerFixture) Setup() {
 	this.response = httptest.NewRecorder()
 	this.request = httptest.NewRequest("GET", "/", nil)
-	this.handler = newRecoveryHandler(this, this, this)
+	ignoredErrors := []error{context.Canceled, context.DeadlineExceeded, sql.ErrTxDone}
+	this.handler = newRecoveryHandler(this, ignoredErrors, this, this)
 }
 
 func (this *RecoveryHandlerFixture) TestInnerHandlerCalled() {

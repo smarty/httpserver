@@ -1,8 +1,6 @@
 package httpserver
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"net/http"
 	"runtime/debug"
@@ -10,16 +8,13 @@ import (
 
 type recoveryHandler struct {
 	http.Handler
-	monitor monitor
-	logger  logger
+	ignoredErrors []error
+	monitor       monitor
+	logger        logger
 }
 
-func newRecoveryHandler(handler http.Handler, monitor monitor, logger logger) http.Handler {
-	return &recoveryHandler{
-		Handler: handler,
-		monitor: monitor,
-		logger:  logger,
-	}
+func newRecoveryHandler(handler http.Handler, ignoredErrors []error, monitor monitor, logger logger) http.Handler {
+	return &recoveryHandler{Handler: handler, ignoredErrors: ignoredErrors, monitor: monitor, logger: logger}
 }
 
 func (this *recoveryHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
@@ -37,33 +32,27 @@ func (this *recoveryHandler) finally(response http.ResponseWriter, request *http
 }
 
 func (this *recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
-	if isIgnoredError(recovered) {
+	if this.isIgnoredError(recovered) {
 		return
 	}
 
 	this.monitor.PanicRecovered(request, recovered)
 	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", recovered, debug.Stack())
 }
-func (this *recoveryHandler) internalServerError(response http.ResponseWriter) {
-	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-}
-func isIgnoredError(recovered interface{}) bool {
+func (this *recoveryHandler) isIgnoredError(recovered interface{}) bool {
 	err, isErr := recovered.(error)
 	if !isErr {
 		return false
 	}
 
-	if errors.Is(err, context.Canceled) {
-		return true
-	}
-
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-
-	if errors.Is(err, sql.ErrTxDone) {
-		return true
+	for _, ignored := range this.ignoredErrors {
+		if errors.Is(err, ignored) {
+			return true
+		}
 	}
 
 	return false
+}
+func (this *recoveryHandler) internalServerError(response http.ResponseWriter) {
+	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
