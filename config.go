@@ -184,4 +184,4 @@ func (this *filteredWriter) Write(buffer []byte) (int, error) {
 	return this.Writer.Write(buffer)
 }
 
-var filteredLogStatements = []byte("golang.org/issue/25192") // "http: URL query contains semicolon, which is no longer a supported separator; parts of the query may be stripped when parsed; see golang.org/issue/25192"
+var filteredLogStatements = []byte("golang.org/issue/25192\n") // "http: URL query contains semicolon, which is no longer a supported separator; parts of the query may be stripped when parsed; see golang.org/issue/25192"
