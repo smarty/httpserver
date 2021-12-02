@@ -1,11 +1,15 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"database/sql"
+	"io"
+	"log"
 	"net"
 	"net/http"
+	"os"
 	"syscall"
 	"time"
 )
@@ -122,6 +126,7 @@ func (singleton) apply(options ...option) option {
 				WriteTimeout:      this.WriteResponseTimeout,
 				IdleTimeout:       this.IdleConnectionTimeout,
 				BaseContext:       func(net.Listener) context.Context { return this.Context },
+				ErrorLog:          newFilteredLogger(),
 			}
 		}
 	}
@@ -161,3 +166,22 @@ type nop struct{}
 func (*nop) Printf(_ string, _ ...interface{})                {}
 func (*nop) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
 func (*nop) PanicRecovered(*http.Request, interface{})        {}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type filteredWriter struct{ io.Writer }
+
+func newFilteredLogger() *log.Logger {
+	writer := &filteredWriter{Writer: os.Stderr}
+	return log.New(writer, log.Prefix(), log.Flags())
+}
+
+func (this *filteredWriter) Write(buffer []byte) (int, error) {
+	if bytes.HasSuffix(buffer, filteredLogStatements) {
+		return len(buffer), nil
+	}
+
+	return this.Writer.Write(buffer)
+}
+
+var filteredLogStatements = []byte("golang.org/issue/25192") // "http: URL query contains semicolon, which is no longer a supported separator; parts of the query may be stripped when parsed; see golang.org/issue/25192"
