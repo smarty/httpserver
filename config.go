@@ -29,6 +29,7 @@ type configuration struct {
 	IgnoredErrors            []error
 	Monitor                  monitor
 	Logger                   logger
+	ErrorLogger              logger
 	HTTPServer               httpServer
 }
 
@@ -97,6 +98,9 @@ func (singleton) Monitor(value monitor) option {
 func (singleton) Logger(value logger) option {
 	return func(this *configuration) { this.Logger = value }
 }
+func (singleton) ErrorLogger(value logger) option {
+	return func(this *configuration) { this.ErrorLogger = value }
+}
 
 // Deprecated: SocketConfig is deprecated.
 func (singleton) SocketConfig(value listenConfig) option { return Options.ListenConfig(value) }
@@ -122,7 +126,7 @@ func (singleton) apply(options ...option) option {
 				WriteTimeout:      this.WriteResponseTimeout,
 				IdleTimeout:       this.IdleConnectionTimeout,
 				BaseContext:       func(net.Listener) context.Context { return this.Context },
-				ErrorLog:          newServerLogger(this.Logger),
+				ErrorLog:          newServerLogger(this.ErrorLogger),
 			}
 		}
 	}
@@ -152,6 +156,7 @@ func (singleton) defaults(options ...option) []option {
 		Options.Handler(defaultNop),
 		Options.Monitor(defaultNop),
 		Options.Logger(defaultNop),
+		Options.ErrorLogger(defaultNop),
 		Options.ListenConfig(defaultListenConfig),
 		Options.ListenAdapter(nil),
 	}, options...)
