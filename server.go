@@ -20,7 +20,7 @@ type defaultServer struct {
 	listenAddress   string
 	listenConfig    listenConfig
 	listenAdapter   func(net.Listener) net.Listener
-	listenNotify    chan<- bool
+	listenReady     chan<- bool
 	tlsConfig       *tls.Config
 	httpServer      httpServer
 	logger          logger
@@ -39,7 +39,7 @@ func newServer(config configuration) ListenCloser {
 		listenAddress:   config.ListenAddress,
 		listenConfig:    config.ListenConfig,
 		listenAdapter:   config.ListenAdapter,
-		listenNotify:    config.ListenNotify,
+		listenReady:     config.ListenReady,
 		tlsConfig:       config.TLSConfig,
 		httpServer:      config.HTTPServer,
 		logger:          config.Logger,
@@ -73,7 +73,7 @@ func (this *defaultServer) listen(waiter *sync.WaitGroup) {
 func (this *defaultServer) newListener() (net.Listener, error) {
 	listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress)
 	if err != nil {
-		this.notify(false)
+		this.notifyReady(false)
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (this *defaultServer) newListener() (net.Listener, error) {
 		listener = tls.NewListener(listener, this.tlsConfig)
 	}
 
-	this.notify(true)
+	this.notifyReady(true)
 	return listener, nil
 }
 func (this *defaultServer) serve(listener net.Listener) error {
@@ -97,14 +97,13 @@ func (this *defaultServer) serve(listener net.Listener) error {
 		return err
 	}
 }
-func (this *defaultServer) notify(value bool) {
-	if this.listenNotify == nil {
+func (this *defaultServer) notifyReady(ready bool) {
+	if this.listenReady == nil {
 		return
 	}
 
-	this.listenNotify <- value
-	close(this.listenNotify)
-	this.listenNotify = nil
+	this.listenReady <- ready
+	this.listenReady = nil
 }
 func (this *defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	var shutdownError error

@@ -24,7 +24,7 @@ type configuration struct {
 	ListenAddress            string
 	ListenConfig             listenConfig
 	ListenAdapter            func(net.Listener) net.Listener
-	ListenNotify             chan<- bool
+	ListenReady              chan<- bool
 	TLSConfig                *tls.Config
 	HandlePanic              bool
 	IgnoredErrors            []error
@@ -93,8 +93,8 @@ func (singleton) ListenConfig(value listenConfig) option {
 func (singleton) ListenAdapter(value func(net.Listener) net.Listener) option {
 	return func(this *configuration) { this.ListenAdapter = value }
 }
-func (singleton) ListenNotify(value chan<- bool) option {
-	return func(this *configuration) { this.ListenNotify = value }
+func (singleton) ListenReady(value chan<- bool) option {
+	return func(this *configuration) { this.ListenReady = value }
 }
 func (singleton) Monitor(value monitor) option {
 	return func(this *configuration) { this.Monitor = value }
@@ -163,7 +163,7 @@ func (singleton) defaults(options ...option) []option {
 		Options.ErrorLogger(defaultNop),
 		Options.ListenConfig(defaultListenConfig),
 		Options.ListenAdapter(nil),
-		Options.ListenNotify(nil),
+		Options.ListenReady(nil),
 	}, options...)
 }
 
