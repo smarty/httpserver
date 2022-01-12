@@ -20,6 +20,7 @@ type defaultServer struct {
 	listenAddress   string
 	listenConfig    listenConfig
 	listenAdapter   func(net.Listener) net.Listener
+	listenNotify    chan<- bool
 	tlsConfig       *tls.Config
 	httpServer      httpServer
 	logger          logger
@@ -38,6 +39,7 @@ func newServer(config configuration) ListenCloser {
 		listenAddress:   config.ListenAddress,
 		listenConfig:    config.ListenConfig,
 		listenAdapter:   config.ListenAdapter,
+		listenNotify:    config.ListenNotify,
 		tlsConfig:       config.TLSConfig,
 		httpServer:      config.HTTPServer,
 		logger:          config.Logger,
@@ -71,6 +73,7 @@ func (this *defaultServer) listen(waiter *sync.WaitGroup) {
 func (this *defaultServer) newListener() (net.Listener, error) {
 	listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress)
 	if err != nil {
+		this.notify(false)
 		return nil, err
 	}
 
@@ -82,6 +85,7 @@ func (this *defaultServer) newListener() (net.Listener, error) {
 		listener = tls.NewListener(listener, this.tlsConfig)
 	}
 
+	this.notify(true)
 	return listener, nil
 }
 func (this *defaultServer) serve(listener net.Listener) error {
@@ -92,6 +96,15 @@ func (this *defaultServer) serve(listener net.Listener) error {
 	} else {
 		return err
 	}
+}
+func (this *defaultServer) notify(value bool) {
+	if this.listenNotify == nil {
+		return
+	}
+
+	this.listenNotify <- value
+	close(this.listenNotify)
+	this.listenNotify = nil
 }
 func (this *defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	var shutdownError error
