@@ -122,7 +122,7 @@ func (this *defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 func (this *defaultServer) awaitOutstandingRequests(err error) {
 	defer this.logger.Printf("[INFO] HTTP server shutdown complete.")
 
-	if err == nil {
+	if err == nil || err == context.Canceled {
 		return
 	}
 
