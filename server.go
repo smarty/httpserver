@@ -61,7 +61,6 @@ func (this *defaultServer) listen(waiter *sync.WaitGroup) {
 		return
 	}
 
-	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s]...", this.listenAddress)
 	if listener, err := this.newListener(); err != nil {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
 	} else if err = this.serve(listener); err != nil {
@@ -87,6 +86,8 @@ func (this *defaultServer) newListener() (net.Listener, error) {
 	return listener, nil
 }
 func (this *defaultServer) serve(listener net.Listener) error {
+	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s]...", this.listenAddress)
+
 	if err := this.httpServer.Serve(listener); err == nil {
 		return nil
 	} else if err == http.ErrServerClosed {
