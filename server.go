@@ -61,13 +61,13 @@ func (this *defaultServer) listen(waiter *sync.WaitGroup) {
 		return
 	}
 
-	if listener, err := this.newListener(); err != nil {
+	if listener, err := this.bindListener(); err != nil {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
 	} else if err = this.serve(listener); err != nil {
 		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
 	}
 }
-func (this *defaultServer) newListener() (net.Listener, error) {
+func (this *defaultServer) bindListener() (net.Listener, error) {
 	listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress)
 	if err != nil {
 		this.notifyReady(false)
