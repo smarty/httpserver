@@ -173,6 +173,8 @@ func (singleton) defaults(options ...option) []option {
 func parseListenAddress(value string) (string, string) {
 	if parsed := parseURL(value); parsed == nil {
 		return "tcp", value
+	} else if strings.ToLower(parsed.Scheme) == "unix" {
+		return "unix", value[len("unix://"):] // don't prepend slash which assumes full path because path might be relative
 	} else {
 		return coalesce(parsed.Scheme, "tcp"), coalesce(parsed.Host, parsed.Path)
 	}
