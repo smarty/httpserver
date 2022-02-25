@@ -17,6 +17,7 @@ type defaultServer struct {
 	softShutdown    context.CancelFunc
 	shutdownTimeout time.Duration
 	forcedTimeout   time.Duration
+	listenNetwork   string
 	listenAddress   string
 	listenConfig    listenConfig
 	listenAdapter   func(net.Listener) net.Listener
@@ -36,6 +37,7 @@ func newServer(config configuration) ListenCloser {
 		softShutdown:    softShutdown,
 		shutdownTimeout: config.ShutdownTimeout,
 		forcedTimeout:   config.ForceShutdownTimeout,
+		listenNetwork:   config.ListenNetwork,
 		listenAddress:   config.ListenAddress,
 		listenConfig:    config.ListenConfig,
 		listenAdapter:   config.ListenAdapter,
@@ -62,13 +64,13 @@ func (this *defaultServer) listen(waiter *sync.WaitGroup) {
 	}
 
 	if listener, err := this.bindListener(); err != nil {
-		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
+		this.logger.Printf("[WARN] Unable to listen on [%s://%s]: [%s]", this.listenNetwork, this.listenAddress, err)
 	} else if err = this.serve(listener); err != nil {
-		this.logger.Printf("[WARN] Unable to listen: [%s]", err)
+		this.logger.Printf("[WARN] Unable to listen on [%s://%s]: [%s]", this.listenNetwork, this.listenAddress, err)
 	}
 }
 func (this *defaultServer) bindListener() (net.Listener, error) {
-	listener, err := this.listenConfig.Listen(this.softContext, "tcp", this.listenAddress)
+	listener, err := this.listenConfig.Listen(this.softContext, this.listenNetwork, this.listenAddress)
 	if err != nil {
 		this.notifyReady(false)
 		return nil, err
@@ -86,7 +88,7 @@ func (this *defaultServer) bindListener() (net.Listener, error) {
 	return listener, nil
 }
 func (this *defaultServer) serve(listener net.Listener) error {
-	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s]...", this.listenAddress)
+	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s://%s]...", this.listenNetwork, this.listenAddress)
 
 	if err := this.httpServer.Serve(listener); err == nil {
 		return nil

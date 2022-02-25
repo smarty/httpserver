@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -21,6 +23,7 @@ type configuration struct {
 	IdleConnectionTimeout    time.Duration
 	ShutdownTimeout          time.Duration
 	ForceShutdownTimeout     time.Duration
+	ListenNetwork            string
 	ListenAddress            string
 	ListenConfig             listenConfig
 	ListenAdapter            func(net.Listener) net.Listener
@@ -49,7 +52,7 @@ func (singleton) Context(value context.Context) option {
 	return func(this *configuration) { this.Context = value }
 }
 func (singleton) ListenAddress(value string) option {
-	return func(this *configuration) { this.ListenAddress = value }
+	return func(this *configuration) { this.ListenNetwork, this.ListenAddress = parseListenAddress(value) }
 }
 func (singleton) TLSConfig(value *tls.Config) option {
 	return func(this *configuration) { this.TLSConfig = value }
@@ -165,6 +168,32 @@ func (singleton) defaults(options ...option) []option {
 		Options.ListenAdapter(nil),
 		Options.ListenReady(nil),
 	}, options...)
+}
+
+func parseListenAddress(value string) (string, string) {
+	if parsed := parseURL(value); parsed == nil {
+		return "tcp", value
+	} else {
+		return coalesce(parsed.Scheme, "tcp"), coalesce(parsed.Host, parsed.Path)
+	}
+}
+func parseURL(value string) *url.URL {
+	value = strings.TrimSpace(value)
+	if len(value) == 0 {
+		return nil
+	} else if parsed, err := url.Parse(value); err != nil {
+		return nil
+	} else {
+		return parsed
+	}
+}
+func coalesce(values ...string) string {
+	for _, item := range values {
+		if len(item) > 0 {
+			return item
+		}
+	}
+	return ""
 }
 
 type nop struct{}
