@@ -13,10 +13,10 @@ type ListenCloser interface {
 }
 
 type logger interface {
-	Printf(string, ...interface{})
+	Printf(string, ...any)
 }
 type monitor interface {
-	PanicRecovered(request *http.Request, err interface{})
+	PanicRecovered(request *http.Request, err any)
 }
 
 type httpServer interface {

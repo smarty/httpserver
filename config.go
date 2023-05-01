@@ -200,6 +200,6 @@ func coalesce(values ...string) string {
 
 type nop struct{}
 
-func (*nop) Printf(_ string, _ ...interface{})                {}
+func (*nop) Printf(_ string, _ ...any)                        {}
 func (*nop) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
-func (*nop) PanicRecovered(*http.Request, interface{})        {}
+func (*nop) PanicRecovered(*http.Request, any)                {}

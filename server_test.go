@@ -165,7 +165,7 @@ func (this *ServerFixture) Shutdown(ctx context.Context) error {
 	return this.shutdownError
 }
 
-func (this *ServerFixture) Printf(format string, args ...interface{}) {
+func (this *ServerFixture) Printf(format string, args ...any) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.logged = append(this.logged, fmt.Sprintf(format, args...))

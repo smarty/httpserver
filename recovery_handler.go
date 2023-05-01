@@ -31,7 +31,7 @@ func (this *recoveryHandler) finally(response http.ResponseWriter, request *http
 	this.internalServerError(response)
 }
 
-func (this *recoveryHandler) logRecovery(recovered interface{}, request *http.Request) {
+func (this *recoveryHandler) logRecovery(recovered any, request *http.Request) {
 	if this.isIgnoredError(recovered) {
 		return
 	}
@@ -39,7 +39,7 @@ func (this *recoveryHandler) logRecovery(recovered interface{}, request *http.Re
 	this.monitor.PanicRecovered(request, recovered)
 	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", recovered, debug.Stack())
 }
-func (this *recoveryHandler) isIgnoredError(recovered interface{}) bool {
+func (this *recoveryHandler) isIgnoredError(recovered any) bool {
 	err, isErr := recovered.(error)
 	if !isErr {
 		return false

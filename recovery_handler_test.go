@@ -28,11 +28,11 @@ type RecoveryHandlerFixture struct {
 	serveHTTPCount    int
 	serveHTTPResponse http.ResponseWriter
 	serveHTTPRequest  *http.Request
-	serveHTTPError    interface{}
+	serveHTTPError    any
 
 	panicRecoveredCount   int
 	panicRecoveredRequest *http.Request
-	panicRecoveredError   interface{}
+	panicRecoveredError   any
 
 	logged []string
 }
@@ -123,12 +123,12 @@ func (this *RecoveryHandlerFixture) ServeHTTP(response http.ResponseWriter, requ
 	}
 }
 
-func (this *RecoveryHandlerFixture) PanicRecovered(request *http.Request, err interface{}) {
+func (this *RecoveryHandlerFixture) PanicRecovered(request *http.Request, err any) {
 	this.panicRecoveredCount++
 	this.panicRecoveredRequest = request
 	this.panicRecoveredError = err
 }
 
-func (this *RecoveryHandlerFixture) Printf(format string, args ...interface{}) {
+func (this *RecoveryHandlerFixture) Printf(format string, args ...any) {
 	this.logged = append(this.logged, fmt.Sprintf(format, args...))
 }
