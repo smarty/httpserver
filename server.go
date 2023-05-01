@@ -21,7 +21,7 @@ type defaultServer struct {
 	listenAddress   string
 	listenConfig    listenConfig
 	listenAdapter   func(net.Listener) net.Listener
-	listenReady     chan<- bool
+	listenReady     func(bool)
 	tlsConfig       *tls.Config
 	httpServer      httpServer
 	logger          logger
@@ -103,7 +103,7 @@ func (this *defaultServer) notifyReady(ready bool) {
 		return
 	}
 
-	this.listenReady <- ready
+	this.listenReady(ready)
 	this.listenReady = nil
 }
 func (this *defaultServer) watchShutdown(waiter *sync.WaitGroup) {
