@@ -109,9 +109,6 @@ func (singleton) ErrorLogger(value logger) option {
 	return func(this *configuration) { this.ErrorLogger = value }
 }
 
-// Deprecated: SocketConfig is deprecated.
-func (singleton) SocketConfig(value listenConfig) option { return Options.ListenConfig(value) }
-
 func (singleton) apply(options ...option) option {
 	return func(this *configuration) {
 		for _, item := range Options.defaults(options...) {
