@@ -1,4 +1,4 @@
-module github.com/smartystreets/httpserver/v2
+module github.com/smarty/httpserver/v2
 
 go 1.18
 
