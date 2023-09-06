@@ -122,16 +122,15 @@ func (singleton) apply(options ...option) option {
 		this.Context, this.ContextShutdown = context.WithCancel(this.Context)
 		if this.HTTPServer == nil {
 			this.HTTPServer = &http.Server{
-				Addr:                         this.ListenAddress,
-				Handler:                      this.Handler,
-				DisableGeneralOptionsHandler: true,
-				MaxHeaderBytes:               this.MaxRequestHeaderSize,
-				ReadTimeout:                  this.ReadRequestTimeout,
-				ReadHeaderTimeout:            this.ReadRequestHeaderTimeout,
-				WriteTimeout:                 this.WriteResponseTimeout,
-				IdleTimeout:                  this.IdleConnectionTimeout,
-				BaseContext:                  func(net.Listener) context.Context { return this.Context },
-				ErrorLog:                     newServerLogger(this.ErrorLogger),
+				Addr:              this.ListenAddress,
+				Handler:           this.Handler,
+				MaxHeaderBytes:    this.MaxRequestHeaderSize,
+				ReadTimeout:       this.ReadRequestTimeout,
+				ReadHeaderTimeout: this.ReadRequestHeaderTimeout,
+				WriteTimeout:      this.WriteResponseTimeout,
+				IdleTimeout:       this.IdleConnectionTimeout,
+				BaseContext:       func(net.Listener) context.Context { return this.Context },
+				ErrorLog:          newServerLogger(this.ErrorLogger),
 			}
 		}
 	}
