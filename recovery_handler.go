@@ -12,13 +12,14 @@ import (
 
 type recoveryHandler struct {
 	http.Handler
-	ignoredErrors []error
-	monitor       monitor
-	logger        logger
+	ignoredErrors  []error
+	dumpRawRequest bool
+	monitor        monitor
+	logger         logger
 }
 
-func newRecoveryHandler(handler http.Handler, ignoredErrors []error, monitor monitor, logger logger) http.Handler {
-	return &recoveryHandler{Handler: handler, ignoredErrors: ignoredErrors, monitor: monitor, logger: logger}
+func newRecoveryHandler(handler http.Handler, ignoredErrors []error, dumpRawRequest bool, monitor monitor, logger logger) http.Handler {
+	return &recoveryHandler{Handler: handler, ignoredErrors: ignoredErrors, dumpRawRequest: dumpRawRequest, monitor: monitor, logger: logger}
 }
 
 func (this *recoveryHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
@@ -42,7 +43,7 @@ func (this *recoveryHandler) logRecovery(recovered any, request *http.Request) {
 	}
 
 	this.monitor.PanicRecovered(request, recovered)
-	this.logger.Printf("[ERROR] Recovered panic: %v\n%s%s", recovered, debug.Stack(), requestToString(request))
+	this.logger.Printf("[ERROR] Recovered panic: %v\n%s%s", recovered, debug.Stack(), this.requestToString(request))
 }
 
 func (this *recoveryHandler) isIgnoredError(recovered any) bool {
@@ -64,14 +65,18 @@ func (this *recoveryHandler) internalServerError(response http.ResponseWriter) {
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-func requestToString(request *http.Request) string {
-	data, err := httputil.DumpRequest(request, true)
+func (this *recoveryHandler) requestToString(request *http.Request) string {
+	if !this.dumpRawRequest {
+		return ""
+	}
+
+	raw, err := httputil.DumpRequest(request, true)
 	formatted := strings.Map(func(r rune) rune {
 		if r == '\n' || r == '\t' || unicode.IsPrint(r) {
 			return r
 		}
 		return '?'
-	}, strings.ReplaceAll(string(data), "\r\n", "\n\t"))
+	}, strings.ReplaceAll(string(raw), "\r\n", "\n\t"))
 
 	if err != nil {
 		formatted += fmt.Sprintf(" [request formatting error: %s]", err)

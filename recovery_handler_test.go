@@ -42,7 +42,7 @@ func (this *RecoveryHandlerFixture) Setup() {
 	this.response = httptest.NewRecorder()
 	this.request = httptest.NewRequest("GET", "/", nil)
 	ignoredErrors := []error{context.Canceled, context.DeadlineExceeded, sql.ErrTxDone}
-	this.handler = newRecoveryHandler(this, ignoredErrors, this, this)
+	this.handler = newRecoveryHandler(this, ignoredErrors, true, this, this)
 }
 
 func (this *RecoveryHandlerFixture) TestInnerHandlerCalled() {
