@@ -2,25 +2,31 @@ package httpserver
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"runtime/debug"
+	"strings"
+	"unicode"
 )
 
 type recoveryHandler struct {
 	http.Handler
-	ignoredErrors []error
-	monitor       monitor
-	logger        logger
+	ignoredErrors  []error
+	dumpRawRequest bool
+	monitor        monitor
+	logger         logger
 }
 
-func newRecoveryHandler(handler http.Handler, ignoredErrors []error, monitor monitor, logger logger) http.Handler {
-	return &recoveryHandler{Handler: handler, ignoredErrors: ignoredErrors, monitor: monitor, logger: logger}
+func newRecoveryHandler(handler http.Handler, ignoredErrors []error, dumpRawRequest bool, monitor monitor, logger logger) http.Handler {
+	return &recoveryHandler{Handler: handler, ignoredErrors: ignoredErrors, dumpRawRequest: dumpRawRequest, monitor: monitor, logger: logger}
 }
 
 func (this *recoveryHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	defer this.finally(response, request)
 	this.Handler.ServeHTTP(response, request)
 }
+
 func (this *recoveryHandler) finally(response http.ResponseWriter, request *http.Request) {
 	err := recover()
 	if err == nil {
@@ -37,8 +43,9 @@ func (this *recoveryHandler) logRecovery(recovered any, request *http.Request) {
 	}
 
 	this.monitor.PanicRecovered(request, recovered)
-	this.logger.Printf("[ERROR] Recovered panic: %v\n%s", recovered, debug.Stack())
+	this.logger.Printf("[ERROR] Recovered panic: %v\n%s%s", recovered, debug.Stack(), this.requestToString(request))
 }
+
 func (this *recoveryHandler) isIgnoredError(recovered any) bool {
 	err, isErr := recovered.(error)
 	if !isErr {
@@ -53,6 +60,27 @@ func (this *recoveryHandler) isIgnoredError(recovered any) bool {
 
 	return false
 }
+
 func (this *recoveryHandler) internalServerError(response http.ResponseWriter) {
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+}
+
+func (this *recoveryHandler) requestToString(request *http.Request) string {
+	if !this.dumpRawRequest {
+		return ""
+	}
+
+	raw, err := httputil.DumpRequest(request, true)
+	formatted := strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\t' || unicode.IsPrint(r) {
+			return r
+		}
+		return '?'
+	}, strings.ReplaceAll(string(raw), "\r\n", "\n\t"))
+
+	if err != nil {
+		formatted += fmt.Sprintf(" [request formatting error: %s]", err)
+	}
+
+	return fmt.Sprint("Recovered request: ", formatted)
 }

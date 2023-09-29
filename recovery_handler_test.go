@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -41,7 +42,7 @@ func (this *RecoveryHandlerFixture) Setup() {
 	this.response = httptest.NewRecorder()
 	this.request = httptest.NewRequest("GET", "/", nil)
 	ignoredErrors := []error{context.Canceled, context.DeadlineExceeded, sql.ErrTxDone}
-	this.handler = newRecoveryHandler(this, ignoredErrors, this, this)
+	this.handler = newRecoveryHandler(this, ignoredErrors, true, this, this)
 }
 
 func (this *RecoveryHandlerFixture) TestInnerHandlerCalled() {
@@ -111,6 +112,21 @@ func (this *RecoveryHandlerFixture) TestInnerHandlerPanicWithNonError_ItShouldNo
 		this.So(this.logged[0], should.StartWith, "[ERROR] Recovered panic: panic value")
 	}
 }
+func (this *RecoveryHandlerFixture) TestInnerHandlerPanic_PostData_ReturnHTTP500() {
+	body := bytes.NewReader([]byte("field1=value1&field2=value2\000"))
+	this.request = httptest.NewRequest("POST", "/", body)
+
+	this.serveHTTPError = "panic value"
+	this.handler.ServeHTTP(this.response, this.request)
+
+	this.So(this.response.Code, should.Equal, 500)
+	this.So(this.panicRecoveredCount, should.Equal, 1)
+	this.So(this.panicRecoveredRequest, should.Equal, this.request)
+	if this.So(this.logged, should.HaveLength, 1) {
+		this.So(this.logged[0], should.StartWith, "[ERROR] Recovered panic: panic value")
+		this.So(this.logged[0], should.EndWith, "=value2?")
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -119,6 +135,9 @@ func (this *RecoveryHandlerFixture) ServeHTTP(response http.ResponseWriter, requ
 	this.serveHTTPResponse = response
 	this.serveHTTPRequest = request
 	if this.serveHTTPError != nil {
+		if request.Method == "POST" {
+			_, _ = request.Body.Read(make([]byte, 10)) //simulate partial read
+		}
 		panic(this.serveHTTPError)
 	}
 }

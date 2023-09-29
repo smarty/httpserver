@@ -30,6 +30,7 @@ type configuration struct {
 	ListenReady              func(bool)
 	TLSConfig                *tls.Config
 	HandlePanic              bool
+	DumpRequestOnPanic       bool
 	IgnoredErrors            []error
 	Monitor                  monitor
 	Logger                   logger
@@ -62,6 +63,9 @@ func (singleton) Handler(value http.Handler) option {
 }
 func (singleton) HandlePanic(value bool) option {
 	return func(this *configuration) { this.HandlePanic = value }
+}
+func (singleton) DumpRequestOnPanic(value bool) option {
+	return func(this *configuration) { this.DumpRequestOnPanic = value }
 }
 func (singleton) IgnoredErrors(value ...error) option {
 	return func(this *configuration) { this.IgnoredErrors = value }
@@ -116,7 +120,7 @@ func (singleton) apply(options ...option) option {
 		}
 
 		if this.HandlePanic {
-			this.Handler = newRecoveryHandler(this.Handler, this.IgnoredErrors, this.Monitor, this.Logger)
+			this.Handler = newRecoveryHandler(this.Handler, this.IgnoredErrors, this.DumpRequestOnPanic, this.Monitor, this.Logger)
 		}
 
 		this.Context, this.ContextShutdown = context.WithCancel(this.Context)
@@ -155,6 +159,7 @@ func (singleton) defaults(options ...option) []option {
 		Options.ShutdownTimeout(time.Second * 5),
 		Options.ForceShutdownTimeout(time.Second),
 		Options.HandlePanic(true),
+		Options.DumpRequestOnPanic(false),
 		Options.IgnoredErrors(context.Canceled, context.DeadlineExceeded, sql.ErrTxDone),
 		Options.Context(context.Background()),
 		Options.Handler(defaultNop),
