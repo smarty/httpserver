@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -128,6 +129,22 @@ func (this *RecoveryHandlerFixture) TestInnerHandlerPanic_PostData_ReturnHTTP500
 	}
 }
 
+func (this *RecoveryHandlerFixture) TestInnerHandlerPanic_PostDataClosed_ReturnHTTP500() {
+	this.request = httptest.NewRequest("HEAD", "/", dummyReader{})
+
+	this.serveHTTPError = "panic value"
+	this.handler.ServeHTTP(this.response, this.request)
+
+	this.So(this.response.Code, should.Equal, 500)
+	this.So(this.panicRecoveredCount, should.Equal, 1)
+	this.So(this.panicRecoveredRequest, should.Equal, this.request)
+	if this.So(this.logged, should.HaveLength, 1) {
+		this.So(this.logged[0], should.StartWith, "[ERROR] Recovered panic: panic value")
+		this.So(this.logged[0], should.ContainSubstring, "closed pipe")
+		this.So(this.logged[0], should.ContainSubstring, "HEAD /")
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (this *RecoveryHandlerFixture) ServeHTTP(response http.ResponseWriter, request *http.Request) {
@@ -137,6 +154,9 @@ func (this *RecoveryHandlerFixture) ServeHTTP(response http.ResponseWriter, requ
 	if this.serveHTTPError != nil {
 		if request.Method == "POST" {
 			_, _ = request.Body.Read(make([]byte, 10)) //simulate partial read
+		} else if request.Method == "HEAD" {
+			_, _ = io.ReadAll(request.Body)
+			_ = request.Body.Close()
 		}
 		panic(this.serveHTTPError)
 	}
@@ -151,3 +171,8 @@ func (this *RecoveryHandlerFixture) PanicRecovered(request *http.Request, err an
 func (this *RecoveryHandlerFixture) Printf(format string, args ...any) {
 	this.logged = append(this.logged, fmt.Sprintf(format, args...))
 }
+
+type dummyReader struct{}
+
+func (d dummyReader) Close() error               { return io.ErrClosedPipe }
+func (d dummyReader) Read(_ []byte) (int, error) { return 0, io.EOF }

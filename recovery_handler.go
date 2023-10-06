@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -79,7 +80,12 @@ func (this *recoveryHandler) requestToString(request *http.Request) string {
 	}, strings.ReplaceAll(string(raw), "\r\n", "\n\t"))
 
 	if err != nil {
-		formatted += fmt.Sprintf(" [request formatting error: %s]", err)
+		// manually write out request info as it will not be returned on error (e.g. when Body is closed)
+		// [see implementation of DumpRequest]
+		b := new(bytes.Buffer)
+		_, _ = fmt.Fprintf(b, "%s %s HTTP/%d.%d\r\n", request.Method, request.RequestURI, request.ProtoMajor, request.ProtoMinor)
+		_ = request.Header.WriteSubset(b, nil)
+		formatted = fmt.Sprintf("%s [request formatting error: %s]", b.String(), err)
 	}
 
 	return fmt.Sprint("Recovered request: ", formatted)
