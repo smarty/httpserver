@@ -172,7 +172,7 @@ func (singleton) defaults(options ...option) []option {
 	}, options...)
 }
 
-func parseListenAddress(value string) (string, string) {
+func parseListenAddress(value string) (network, address string) {
 	if parsed := parseURL(value); parsed == nil {
 		return "tcp", value
 	} else if strings.ToLower(parsed.Scheme) == "unix" {
