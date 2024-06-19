@@ -90,13 +90,11 @@ func (this *defaultServer) bindListener() (net.Listener, error) {
 func (this *defaultServer) serve(listener net.Listener) error {
 	this.logger.Printf("[INFO] Listening for HTTP traffic on [%s://%s]...", this.listenNetwork, this.listenAddress)
 
-	if err := this.httpServer.Serve(listener); err == nil {
+	err := this.httpServer.Serve(listener)
+	if err == http.ErrServerClosed {
 		return nil
-	} else if err == http.ErrServerClosed {
-		return nil
-	} else {
-		return err
 	}
+	return err
 }
 func (this *defaultServer) notifyReady(ready bool) {
 	if this.listenReady == nil {
