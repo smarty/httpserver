@@ -115,11 +115,11 @@ func (this *defaultServer) watchShutdown(waiter *sync.WaitGroup) {
 	<-this.softContext.Done()                                                  // waiting for soft context shutdown to occur
 	ctx, cancel := context.WithTimeout(this.hardContext, this.shutdownTimeout) // wait until shutdownTimeout for shutdown
 	defer cancel()
-	this.logger.Printf("[INFO] Shutting down HTTP server...")
+	this.logger.Printf("[INFO] Shutting down HTTP server [%s]...", this.listenAddress)
 	shutdownError = this.httpServer.Shutdown(ctx)
 }
 func (this *defaultServer) awaitOutstandingRequests(err error) {
-	defer this.logger.Printf("[INFO] HTTP server shutdown complete.")
+	defer this.logger.Printf("[INFO] HTTP server shutdown complete. [%s]", this.listenAddress)
 
 	if err == nil {
 		return
