@@ -11,8 +11,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/smarty/assertions/should"
 	"github.com/smarty/gunit"
+	"github.com/smarty/gunit/assert/should"
 )
 
 func TestRecoveryHandlerFixture(t *testing.T) {
@@ -153,7 +153,7 @@ func (this *RecoveryHandlerFixture) ServeHTTP(response http.ResponseWriter, requ
 	this.serveHTTPRequest = request
 	if this.serveHTTPError != nil {
 		if request.Method == "POST" {
-			_, _ = request.Body.Read(make([]byte, 10)) //simulate partial read
+			_, _ = request.Body.Read(make([]byte, 10)) // simulate partial read
 		} else if request.Method == "HEAD" {
 			_, _ = io.ReadAll(request.Body)
 			_ = request.Body.Close()
