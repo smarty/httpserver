@@ -36,6 +36,8 @@ type configuration struct {
 	Logger                   logger
 	ErrorLogger              logger
 	HTTPServer               httpServer
+	Protocols                *http.Protocols
+	HTTP2                    *http.HTTP2Config
 }
 
 func New(options ...option) ListenCloser {
@@ -72,6 +74,12 @@ func (singleton) IgnoredErrors(value ...error) option {
 }
 func (singleton) HTTPServer(value httpServer) option {
 	return func(this *configuration) { this.HTTPServer = value }
+}
+func (singleton) Protocols(value *http.Protocols) option {
+	return func(this *configuration) { this.Protocols = value }
+}
+func (singleton) HTTP2(value *http.HTTP2Config) option {
+	return func(this *configuration) { this.HTTP2 = value }
 }
 func (singleton) MaxRequestHeaderSize(value int) option {
 	return func(this *configuration) { this.MaxRequestHeaderSize = value }
@@ -133,6 +141,8 @@ func (singleton) apply(options ...option) option {
 				ReadHeaderTimeout: this.ReadRequestHeaderTimeout,
 				WriteTimeout:      this.WriteResponseTimeout,
 				IdleTimeout:       this.IdleConnectionTimeout,
+				Protocols:         this.Protocols,
+				HTTP2:             this.HTTP2,
 				BaseContext:       func(net.Listener) context.Context { return this.Context },
 				ErrorLog:          newServerLogger(this.ErrorLogger),
 			}
@@ -151,6 +161,8 @@ func (singleton) defaults(options ...option) []option {
 	return append([]option{
 		Options.ListenAddress(":http"),
 		Options.TLSConfig(nil),
+		Options.Protocols(nil),
+		Options.HTTP2(nil),
 		Options.MaxRequestHeaderSize(1024 * 2),
 		Options.ReadRequestTimeout(time.Second * 5),
 		Options.ReadRequestHeaderTimeout(time.Second),
